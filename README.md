@@ -1,5 +1,8 @@
-使用openAI的格式转换调用grok官网，进行api处理
 
+# grok2API 接入指南：基于 Docker 的实现
+
+## 项目简介
+本项目提供了一种简单、高效的方式通过 Docker 部署 使用openAI的格式转换调用grok官网，进行api处理。
 ## 方法一：Docker部署
 
 ### 1. 获取项目
@@ -105,9 +108,12 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - 模型列表：`/hf/v1/models`
 - 对话：`/hf/v1/chat/completions`
 
-## 注意事项
+## 备注
 - 消息基于用户的伪造连续对话
 - 可能存在一定程度的智能降级
-
 ## 补充说明
 如需使用图像功能，需在[PicGo图床](https://www.picgo.net/)申请API Key。
+
+## 注意事项
+⚠️ 本项目仅供学习和研究目的，请遵守相关使用条款。
+
