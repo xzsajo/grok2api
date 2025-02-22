@@ -98,7 +98,7 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - `grok-3-deepsearch`
 - `grok-3-reasoning`
 - 
-### cookie的获取版本：
+### cookie的获取办法：
 1、打开[grok官网](https://grok.com/)
 2、复制如下两个填入即可
 ![A0{AOZO}2ESW5}8DYW)KSF6|690x220](upload://41LZb37nXdhWuvo4LRcE7JqBCkY.png)
