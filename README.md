@@ -116,7 +116,7 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 
 ## 备注
 - 消息基于用户的伪造连续对话
-- 可能存在一定程度的智能降级
+- 可能存在一定程度的降智
 ## 补充说明
 如需使用图像功能，需在[PicGo图床](https://www.picgo.net/)申请API Key。
 
