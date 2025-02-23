@@ -26,7 +26,7 @@ const CONFIG = {
         API_KEY: process.env.API_KEY || "sk-123456",
         SIGNATURE_COOKIE: null,
         TEMP_COOKIE: null,
-        PICGO_KEY: process.env.PICGO_KEY || null //想要生图的话需要填入这个PICGO图床的key
+        PICGO_KEY: process.env.PICGO_KEY || null //想要流式生图的话需要填入这个PICGO图床的key
     },
     SERVER: {
         PORT: process.env.PORT || 3000,
@@ -35,6 +35,7 @@ const CONFIG = {
     RETRY: {
         MAX_ATTEMPTS: 2//重试次数
     },
+    SHOW_THINKING:process.env.SHOW_THINKING === 'true',
     IS_THINKING: false,
     IS_IMG_GEN: false,
     IS_IMG_GEN2: false,
@@ -69,6 +70,7 @@ async function initialization() {
     ssoArray.forEach((sso, index) => {
         tokenManager.addToken(`sso-rw=${ssorwArray[index]};sso=${sso}`);
     });
+    console.log(JSON.stringify(tokenManager.getActiveTokens(), null, 2));
     await Utils.get_signature()
     Logger.info("初始化完成", 'Server');
 }
@@ -347,17 +349,33 @@ class GrokApiClient {
     }
 
     async prepareChatRequest(request) {
-        if ((request.model === 'grok-2-imageGen' || request.model === 'grok-3-imageGen') && !CONFIG.API.PICGO_KEY) {
-            throw new Error(`该模型需要配置PICGO图床密钥!`);
+        if ((request.model === 'grok-2-imageGen' || request.model === 'grok-3-imageGen') && !CONFIG.API.PICGO_KEY && request.stream) {
+            throw new Error(`该模型流式输出需要配置PICGO图床密钥!`);
         }
-        var todoMessages = request.messages;
-
-        let fileAttachments = [];
+        
+        // 处理画图模型的消息限制
+        let todoMessages = request.messages;
+        if (request.model === 'grok-2-imageGen' || request.model === 'grok-3-imageGen') {
+            const lastMessage = todoMessages[todoMessages.length - 1];
+            if (lastMessage.role !== 'user') {
+                throw new Error('画图模型的最后一条消息必须是用户消息!');
+            }
+            todoMessages = [lastMessage]; 
+        }
+        
+        const fileAttachments = [];
         let messages = '';
         let lastRole = null;
         let lastContent = '';
-        let search = false;
-
+        const search = request.model === 'grok-2-search';
+    
+        // 移除<think>标签及其内容和base64图片
+        const removeThinkTags = (text) => {
+            text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+            text = text.replace(/!\[image\]\(data:.*?base64,.*?\)/g, '[图片]');
+            return text;
+        };
+    
         const processImageUrl = async (content) => {
             if (content.type === 'image_url' && content.image_url.url.includes('data:image')) {
                 const imageResponse = await this.uploadBase64Image(
@@ -368,64 +386,67 @@ class GrokApiClient {
             }
             return null;
         };
-
+    
+        const processContent = async (content) => {
+            if (Array.isArray(content)) {
+                let textContent = '';
+                for (const item of content) {
+                    if (item.type === 'image_url') {
+                        textContent += (textContent ? '\n' : '') + "[图片]";
+                    } else if (item.type === 'text') {
+                        textContent += (textContent ? '\n' : '') + removeThinkTags(item.text);
+                    }
+                }
+                return textContent;
+            } else if (typeof content === 'object' && content !== null) {
+                if (content.type === 'image_url') {
+                    return "[图片]";
+                } else if (content.type === 'text') {
+                    return removeThinkTags(content.text);
+                }
+            }
+            return removeThinkTags(this.processMessageContent(content));
+        };
+    
         for (const current of todoMessages) {
             const role = current.role === 'assistant' ? 'assistant' : 'user';
-            let textContent = '';
-
-            if (Array.isArray(current.content)) {
-                for (const item of current.content) {
-                    if (item.type === 'image_url') {
-                        if (current === todoMessages[todoMessages.length - 1]) {
+            const isLastMessage = current === todoMessages[todoMessages.length - 1];
+            
+            // 处理图片附件
+            if (isLastMessage && current.content) {
+                if (Array.isArray(current.content)) {
+                    for (const item of current.content) {
+                        if (item.type === 'image_url') {
                             const processedImage = await processImageUrl(item);
                             if (processedImage) fileAttachments.push(processedImage);
                         }
-                        textContent += (textContent ? '\n' : '') + "[图片]";
-                    } else if (item.type === 'text') {
-                        textContent += (textContent ? '\n' : '') + item.text;
                     }
+                } else if (current.content.type === 'image_url') {
+                    const processedImage = await processImageUrl(current.content);
+                    if (processedImage) fileAttachments.push(processedImage);
                 }
-            } else if (typeof current.content === 'object' && current.content !== null) {
-                if (current.content.type === 'image_url') {
-                    if (current === todoMessages[todoMessages.length - 1]) {
-                        const processedImage = await processImageUrl(current.content);
-                        if (processedImage) fileAttachments.push(processedImage);
-                    }
-                    textContent += (textContent ? '\n' : '') + "[图片]";
-                } else if (current.content.type === 'text') {
-                    textContent = current.content.text;
-                }
-            } else {
-                textContent = this.processMessageContent(current.content);
             }
-            if (textContent) {
-                if (role === lastRole) {
+    
+            // 处理文本内容
+            const textContent = await processContent(current.content);
+            
+            if (textContent || (isLastMessage && fileAttachments.length > 0)) {
+                if (role === lastRole && textContent) {
                     lastContent += '\n' + textContent;
                     messages = messages.substring(0, messages.lastIndexOf(`${role.toUpperCase()}: `)) +
                         `${role.toUpperCase()}: ${lastContent}\n`;
                 } else {
-                    messages += `${role.toUpperCase()}: ${textContent}\n`;
+                    messages += `${role.toUpperCase()}: ${textContent || '[图片]'}\n`;
                     lastContent = textContent;
                     lastRole = role;
                 }
-            } else if (current === todoMessages[todoMessages.length - 1] && fileAttachments.length > 0) {
-                messages += `${role.toUpperCase()}: [图片]\n`;
             }
         }
-
-        if (fileAttachments.length > 4) {
-            fileAttachments = fileAttachments.slice(0, 4); // 最多上传4张
-        }
-
-        messages = messages.trim();
-
-        if (request.model === 'grok-2-search') {
-            search = true;
-        }
+    
         return {
             modelName: this.modelId,
-            message: messages,
-            fileAttachments: fileAttachments,
+            message: messages.trim(),
+            fileAttachments: fileAttachments.slice(0, 4),
             imageAttachments: [],
             disableSearch: false,
             enableImageGeneration: true,
@@ -519,6 +540,8 @@ async function processModelResponse(linejosn, model) {
             }
             return result;
         case 'grok-3-reasoning':
+            if(linejosn?.isThinking && !CONFIG.SHOW_THINKING)return result;
+
             if (linejosn?.isThinking && !CONFIG.IS_THINKING) {
                 result.token = "<think>" + token;
                 CONFIG.IS_THINKING = true;
@@ -538,8 +561,8 @@ async function handleResponse(response, model, res, isStream) {
         let buffer = '';
         let fullResponse = '';
         const dataPromises = [];
-
-        return new Promise((resolve, reject) => {
+        
+        return new Promise((resolve, reject) => { 
             stream.on('data', async (chunk) => {
                 buffer += chunk.toString();
                 const lines = buffer.split('\n');
@@ -552,10 +575,11 @@ async function handleResponse(response, model, res, isStream) {
                         const data = trimmedLine.substring(6);
                         try {
                             if (!data.trim()) continue;
-                            if(data === "[DONE]")continue;
+                            if(data === "[DONE]") continue;
                             const linejosn = JSON.parse(data);
                             if (linejosn?.error) {
-                                reject(new Error(linejosn));
+                                stream.destroy();
+                                reject(new Error("RateLimitError")); 
                                 return;
                             }
                             if (linejosn?.doImgGen || linejosn?.imageAttachmentInfo) {
@@ -582,7 +606,6 @@ async function handleResponse(response, model, res, isStream) {
                             })();
                             dataPromises.push(processPromise);
                         } catch (error) {
-                            console.log(error);
                             continue;
                         }
                     }
@@ -602,14 +625,14 @@ async function handleResponse(response, model, res, isStream) {
                     }
                     CONFIG.IS_IMG_GEN = false;
                     CONFIG.IS_IMG_GEN2 = false;
-                    resolve();
+                    resolve(); 
                 } catch (error) {
-                    reject(error);
+                    reject(error); 
                 }
             });
+
             stream.on('error', (error) => {
-                Logger.error(error, 'Server');
-                reject(error);
+                reject(error); 
             });
         });
     } catch (error) {
@@ -618,7 +641,6 @@ async function handleResponse(response, model, res, isStream) {
         CONFIG.IS_IMG_GEN2 = false;
         throw error;
     }
-
 }
 
 async function handleImageResponse(imageUrl) {
@@ -652,8 +674,16 @@ async function handleImageResponse(imageUrl) {
         }
     }
 
+
     const arrayBuffer = await imageBase64Response.arrayBuffer();
     const imageBuffer = Buffer.from(arrayBuffer);
+
+    if(!CONFIG.API.PICGO_KEY){
+        const base64Image = imageBuffer.toString('base64');
+        const imageContentType = imageBase64Response.headers.get('content-type');
+        return `![image](data:${imageContentType};base64,${base64Image})`
+    }
+
     const formData = new FormData();
 
     formData.append('source', imageBuffer, {
@@ -718,7 +748,7 @@ app.post('/v1/chat/completions', async (req, res) => {
         while (retryCount < CONFIG.RETRY.MAX_ATTEMPTS) {
             retryCount++;
             const grokClient = new GrokApiClient(req.body.model);
-            const requestPayload = await grokClient.prepareChatRequest(req.body);
+            const requestPayload = await grokClient.prepareChatRequest(req.body);       
 
             if (!CONFIG.API.TEMP_COOKIE) {
                 await Utils.get_signature();
