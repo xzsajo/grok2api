@@ -17,6 +17,7 @@ const CONFIG = {
         'grok-2-imageGen': 'grok-latest',
         'grok-2-search': 'grok-latest',
         "grok-3": "grok-3",
+        "grok-3-search": "grok-3",
         "grok-3-imageGen": "grok-3",
         "grok-3-deepsearch": "grok-3",
         "grok-3-reasoning": "grok-3"
@@ -40,7 +41,7 @@ const CONFIG = {
     IS_IMG_GEN: false,
     IS_IMG_GEN2: false,
     SSO_INDEX: 0,//sso的索引
-    ISSHOW_SEARCH_RESULTS: process.env.ISSHOW_SEARCH_RESULTS === 'true',//是否显示搜索结果,默认关闭
+    ISSHOW_SEARCH_RESULTS: process.env.ISSHOW_SEARCH_RESULTS === 'true',//是否显示搜索结果
     CHROME_PATH: process.env.CHROME_PATH || "/usr/bin/chromium"//chrome路径
 };
 puppeteer.use(StealthPlugin())
@@ -100,7 +101,6 @@ class AuthTokenManager {
     }
 
     getTokenByIndex(index, model) {
-        if (!this.modelRateLimit[model]) return;
         if(this.activeTokens.length === 0){
             return null;
         }
@@ -110,6 +110,10 @@ class AuthTokenManager {
     }
 
     recordModelRequest(token, model) {
+        if(model === 'grok-3-search' || model === 'grok-3-imageGen'){
+            model = 'grok-3';
+        }
+
         if (!this.modelRateLimit[model]) return;
         const tokenFrequency = this.tokenModelFrequency.get(token);
         if (tokenFrequency && tokenFrequency[model] !== undefined) {
@@ -118,11 +122,17 @@ class AuthTokenManager {
         this.checkAndRemoveTokenIfLimitReached(token);
     }
     setModelLimit(index, model) {
+        if(model === 'grok-3-search' || model === 'grok-3-imageGen'){
+            model = 'grok-3';
+        }
         if (!this.modelRateLimit[model]) return;
         const tokenFrequency = this.tokenModelFrequency.get(this.activeTokens[index]);
         tokenFrequency[model] = 9999;
     }
     isTokenModelLimitReached(index, model) {
+        if(model === 'grok-3-search' || model === 'grok-3-imageGen'){
+            model = 'grok-3';
+        }
         if (!this.modelRateLimit[model]) return;
         const token = this.activeTokens[index];
         const tokenFrequency = this.tokenModelFrequency.get(token);
@@ -166,7 +176,6 @@ class AuthTokenManager {
                 if (now - expiredTime >= 2 * 60 * 60 * 1000) {
                     this.tokenModelUsage.set(token, {
                         "grok-3": 0,
-                        "grok-3-imageGen": 0,
                         "grok-3-deepsearch": 0,
                         "grok-3-reasoning": 0
                     });
@@ -266,9 +275,9 @@ class Utils {
         });
         return formattedResults.join('\n\n');
     }
-    static createAuthHeaders(model) {
+    static async createAuthHeaders(model) {
         return {
-            'cookie': `${tokenManager.getTokenByIndex(CONFIG.SSO_INDEX, model)}`
+            'cookie': `${await tokenManager.getTokenByIndex(CONFIG.SSO_INDEX, model)}`
         };
     }
 }
@@ -367,7 +376,7 @@ class GrokApiClient {
         let messages = '';
         let lastRole = null;
         let lastContent = '';
-        const search = request.model === 'grok-2-search';
+        const search = request.model === 'grok-2-search' || request.model === 'grok-3-search';
     
         // 移除<think>标签及其内容和base64图片
         const removeThinkTags = (text) => {
@@ -517,39 +526,39 @@ async function processModelResponse(linejosn, model) {
         }
         return result;
     }
-    var token = linejosn?.token
-    if (!token) return result;
+
     //非生图模型的处理
     switch (model) {
         case 'grok-2':
-            result.token = token;
+            result.token = linejosn?.token;
             return result;
         case 'grok-2-search':
+        case 'grok-3-search':
             if (linejosn?.webSearchResults && CONFIG.ISSHOW_SEARCH_RESULTS) {
                 result.token = `\r\n<think>${await Utils.organizeSearchResults(linejosn.webSearchResults)}</think>\r\n`;
             } else {
-                result.token = token;
+                result.token = linejosn?.token;
             }
             return result;
         case 'grok-3':
-            result.token = token;
+            result.token = linejosn?.token;
             return result;
         case 'grok-3-deepsearch':
             if (linejosn.messageTag === "final") {
-                result.token = token;
+                result.token = linejosn?.token;
             }
             return result;
         case 'grok-3-reasoning':
             if(linejosn?.isThinking && !CONFIG.SHOW_THINKING)return result;
 
             if (linejosn?.isThinking && !CONFIG.IS_THINKING) {
-                result.token = "<think>" + token;
+                result.token = "<think>" + linejosn?.token;
                 CONFIG.IS_THINKING = true;
             } else if (CONFIG.IS_THINKING && !linejosn.isThinking) {
-                result.token = "</think>" + token;
+                result.token = "</think>" + linejosn?.token;
                 CONFIG.IS_THINKING = false;
             } else {
-                result.token = token;
+                result.token = linejosn?.token;
             }
             return result;
     }
@@ -578,6 +587,7 @@ async function handleResponse(response, model, res, isStream) {
                             if(data === "[DONE]") continue;
                             const linejosn = JSON.parse(data);
                             if (linejosn?.error) {
+                                Logger.error(JSON.stringify(linejosn,null,2), 'Server');
                                 stream.destroy();
                                 reject(new Error("RateLimitError")); 
                                 return;
@@ -703,7 +713,7 @@ async function handleImageResponse(imageUrl) {
     if (!responseURL.ok) {
         return "生图失败，请查看图床密钥是否设置正确"
     } else {
-        console.log("生图成功");
+        Logger.info("生图成功", 'Server');
         const result = await responseURL.json();
         return `![image](${result.image.url})`
     }
@@ -744,12 +754,11 @@ app.post('/v1/chat/completions', async (req, res) => {
         }
         let isTempCookie = req.body.model.includes("grok-2");
         let retryCount = 0;
+        const grokClient = new GrokApiClient(req.body.model);
+        const requestPayload = await grokClient.prepareChatRequest(req.body);
         
         while (retryCount < CONFIG.RETRY.MAX_ATTEMPTS) {
             retryCount++;
-            const grokClient = new GrokApiClient(req.body.model);
-            const requestPayload = await grokClient.prepareChatRequest(req.body);       
-
             if (!CONFIG.API.TEMP_COOKIE) {
                 await Utils.get_signature();
             }
@@ -758,7 +767,7 @@ app.post('/v1/chat/completions', async (req, res) => {
                 CONFIG.API.SIGNATURE_COOKIE = CONFIG.API.TEMP_COOKIE;
                 Logger.info(`已切换为临时令牌`, 'Server');
             } else {
-                CONFIG.API.SIGNATURE_COOKIE = Utils.createAuthHeaders(req.body.model);
+                CONFIG.API.SIGNATURE_COOKIE = await Utils.createAuthHeaders(req.body.model);
             }
             Logger.info(`当前令牌索引: ${CONFIG.SSO_INDEX}`, 'Server');
             const newMessageReq = await fetch(`${CONFIG.API.BASE_URL}/api/rpc`, {
