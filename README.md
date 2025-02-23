@@ -17,6 +17,7 @@ docker run -it -d --name grok2api \
   -e ISSHOW_SEARCH_RESULTS=false \
   -e CHROME_PATH=/usr/bin/chromium \
   -e PORT=3000 \
+  -e SHOW_THINKING=true \
   -e SSO=your_sso \
   -e SSO_RW=your_sso_rw \
   yxmiler/grok2api:latest
@@ -36,6 +37,7 @@ services:
       - ISSHOW_SEARCH_RESULTS=false
       - CHROME_PATH=/usr/bin/chromium
       - PORT=3000
+      - SHOW_THINKING=true
       - SSO=your_sso
       - SSO_RW=your_sso_rw
     restart: unless-stopped
@@ -55,6 +57,7 @@ docker run -it -d --name grok2api \
   -e ISSHOW_SEARCH_RESULTS=false \
   -e CHROME_PATH=/usr/bin/chromium \
   -e PORT=3000 \
+  -e SHOW_THINKING=true \
   -e SSO=your_sso \
   -e SSO_RW=your_sso_rw \
   yourusername/grok2api:latest
@@ -65,11 +68,12 @@ docker run -it -d --name grok2api \
 | 变量 | 说明 | 示例 |
 |------|------|------|
 | `API_KEY` | 自定义认证鉴权密钥 | `sk-123456` |
-| `PICGO_KEY` | PicGo图床密钥 | - |
+| `PICGO_KEY` | PicGo图床密钥 | 不填则无法流式生图 |
 | `ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 | `true/false` |
 | `SSO` | Grok官网SSO Cookie,,可以设置多个使用,分隔 | - |
 | `SSO_RW` | Grok官网SSO_RW Cookie,,可以设置多个使用,分隔 | - |
 | `PORT` | 服务部署端口 | `3000` |
+| `SHOW_THINKING` | 是否显示思考模型的思考过程 | `true/false` |
 | `CHROME_PATH` | 谷歌浏览器路径,无特别需要不需要修改 | `/usr/bin/chromium` |
 
 ## 方法二：Hugging Face部署
@@ -87,7 +91,8 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 6. 已支持真流式，上面全部功能都可以在流式情况调用
 7. 支持多账号轮询，在环境变量中配置
 8. grok2采用临时账号机制，理论无限调用。
-9. 已转换为openai格式。
+9. 可以选择是否移除思考模型的思考过程。
+10. 已转换为openai格式。
 
 ### 可用模型列表
 - `grok-2`
@@ -117,8 +122,9 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 ## 备注
 - 消息基于用户的伪造连续对话
 - 可能存在一定程度的降智
+- 生图模型不支持历史对话，仅支持生图。
 ## 补充说明
-如需使用图像功能，需在[PicGo图床](https://www.picgo.net/)申请API Key。
+如需使用流式生图的图像功能，需在[PicGo图床](https://www.picgo.net/)申请API Key。
 
 ## 注意事项
 ⚠️ 本项目仅供学习和研究目的，请遵守相关使用条款。
