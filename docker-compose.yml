@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  grok2api:
+    image: yxmiler/grok2api:latest
+    container_name: grok2api
+    ports:
+      - "3000:3000"
+    environment:
+      - API_KEY=your_api_key
+      - ISSHOW_SEARCH_RESULTS=false
+      - CHROME_PATH=/usr/bin/chromium
+      - PORT=3000
+      - SHOW_THINKING=true
+      - SSO=your_sso
+      - SSO_RW=your_sso_rw
+    restart: unless-stopped
