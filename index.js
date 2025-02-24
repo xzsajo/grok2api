@@ -569,7 +569,7 @@ async function processModelResponse(linejosn, model) {
             if (linejosn?.isThinking && !CONFIG.IS_THINKING) {
                 result.token = "<think>" + linejosn?.token;
                 CONFIG.IS_THINKING = true;
-            } else if (CONFIG.IS_THINKING && !linejosn.isThinking) {
+            } else if (!linejosn.isThinking && CONFIG.IS_THINKING) {
                 result.token = "</think>" + linejosn?.token;
                 CONFIG.IS_THINKING = false;
             } else {
@@ -591,6 +591,7 @@ async function handleResponse(response, model, res, isStream) {
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
         }
+        Logger.info("开始处理流式响应", 'Server');
 
         return new Promise((resolve, reject) => {
             stream.on('data', async (chunk) => {
@@ -605,10 +606,13 @@ async function handleResponse(response, model, res, isStream) {
                         const data = trimmedLine.substring(6);
                         try {
                             if (!data.trim()) continue;
-                            if (data === "[DONE]") continue;
+                            if (data === "[DONE]") continue;                     
                             const linejosn = JSON.parse(data);
-                            if (linejosn?.error) {
+                            if (linejosn?.error) {                          
                                 Logger.error(JSON.stringify(linejosn, null, 2), 'Server');
+                                if(linejosn.error?.name === "RateLimitError"){
+                                    CONFIG.API.TEMP_COOKIE = null;
+                                }
                                 stream.destroy();
                                 reject(new Error("RateLimitError"));
                                 return;
@@ -638,6 +642,7 @@ async function handleResponse(response, model, res, isStream) {
                             })();
                             dataPromises.push(processPromise);
                         } catch (error) {
+                            Logger.error(error, 'Server');
                             continue;
                         }
                     }
@@ -659,11 +664,13 @@ async function handleResponse(response, model, res, isStream) {
                     CONFIG.IS_IMG_GEN2 = false;
                     resolve();
                 } catch (error) {
+                    Logger.error(error, 'Server');
                     reject(error);
                 }
             });
 
             stream.on('error', (error) => {
+                Logger.error(error, 'Server');
                 reject(error);
             });
         });
@@ -671,7 +678,7 @@ async function handleResponse(response, model, res, isStream) {
         Logger.error(error, 'Server');
         CONFIG.IS_IMG_GEN = false;
         CONFIG.IS_IMG_GEN2 = false;
-        throw error;
+        throw new Error(error);
     }
 }
 
@@ -698,6 +705,7 @@ async function handleImageResponse(imageUrl) {
             await new Promise(resolve => setTimeout(resolve, CONFIG.API.RETRY_TIME * retryCount));
 
         } catch (error) {
+            Logger.error(error, 'Server');
             retryCount++;
             if (retryCount === MAX_RETRIES) {
                 throw error;
@@ -813,6 +821,7 @@ app.post('/v1/chat/completions', async (req, res) => {
         let retryCount = 0;
         const grokClient = new GrokApiClient(req.body.model);
         const requestPayload = await grokClient.prepareChatRequest(req.body);
+        Logger.info(`请求体: ${JSON.stringify(requestPayload,null,2)}`, 'Server');
 
         while (retryCount < CONFIG.RETRY.MAX_ATTEMPTS) {
             retryCount++;
@@ -830,6 +839,7 @@ app.post('/v1/chat/completions', async (req, res) => {
                 throw new Error('无可用令牌');
             }
             Logger.info(`当前令牌索引: ${CONFIG.SSO_INDEX}`, 'Server');
+            Logger.info(`当前令牌: ${JSON.stringify(CONFIG.API.SIGNATURE_COOKIE,null,2)}`, 'Server');
             const newMessageReq = await fetch(`${CONFIG.API.BASE_URL}/api/rpc`, {
                 method: 'POST',
                 headers: {
@@ -843,9 +853,15 @@ app.post('/v1/chat/completions', async (req, res) => {
                     }
                 })
             });
-
-            const responseText = await newMessageReq.json();
-            const conversationId = responseText.conversationId;
+            let conversationId;
+            var responseText2 = await newMessageReq.clone().text();
+            if (newMessageReq.status === 200) {
+                const responseText = await newMessageReq.json();
+                conversationId = responseText.conversationId;
+            } else {
+                Logger.error(`创建会话请求: ${responseText2}`, 'Server');
+                throw new Error(`创建会话响应错误: ${responseText2}`);
+            }
 
             const response = await fetch(`${CONFIG.API.BASE_URL}/api/conversations/${conversationId}/responses`, {
                 method: 'POST',
@@ -865,8 +881,10 @@ app.post('/v1/chat/completions', async (req, res) => {
                 Logger.info(`当前剩余可用令牌数: ${tokenManager.getTokenCount()}`, 'Server');
                 try {
                     await handleResponse(response, req.body.model, res, req.body.stream);
+                    Logger.info(`请求结束`, 'Server');
                     return;
                 } catch (error) {
+                    Logger.error(error, 'Server');
                     if (isTempCookie) {
                         await Utils.get_signature();
                     } else {
@@ -885,7 +903,7 @@ app.post('/v1/chat/completions', async (req, res) => {
                 if (response.status === 429) {
                     if (isTempCookie) {
                         await Utils.get_signature();
-                    } else {
+                    } else {                      
                         tokenManager.setModelLimit(CONFIG.SSO_INDEX, req.body.model);
                         for (let i = 1; i <= tokenManager.getTokenCount(); i++) {
                             CONFIG.SSO_INDEX = (CONFIG.SSO_INDEX + 1) % tokenManager.getTokenCount();
@@ -896,7 +914,7 @@ app.post('/v1/chat/completions', async (req, res) => {
                             }
                         }
                     }
-                } else {
+                } else {                
                     // 非429错误直接抛出
                     if (isTempCookie) {
                         await Utils.get_signature();
@@ -914,10 +932,8 @@ app.post('/v1/chat/completions', async (req, res) => {
         Logger.error(error, 'ChatAPI');
         res.status(500).json({
             error: {
-                message: error.message,
-                type: 'server_error',
-                param: null,
-                code: error.code || null
+                message: error.message || error,
+                type: 'server_error'
             }
         });
     }
