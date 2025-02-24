@@ -110,7 +110,7 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - 
 ### cookie的获取办法：
 1、打开[grok官网](https://grok.com/)
-2、复制如下两个填入即可
+2、复制如下的SSO的cookie的值填入SSO变量即可
 ![9EA{{UY6 PU~PENQHYO5JS7](https://github.com/user-attachments/assets/539d4a53-9352-49fd-8657-e942a94f44e9)
 
 
