@@ -75,7 +75,7 @@ docker run -it -d --name grok2api \
 |`TUMY_KEY` | TUMY图床密钥，两个图床二选一，不填无法流式生图| -|
 |`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 （可不填，默认关闭） | `true/false`|
 |`SSO` | Grok官网SSO Cookie,可以设置多个使用英文 , 分隔，我的代码里会对不同账号的SSO自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
-|`PORT` | 服务部署端口（可默认，3000） | `3000`|
+|`PORT` | 服务部署端口（可不填，默认3000） | `3000`|
 |`IS_CUSTOM_SSO` | 这是如果你想自己来自定义负载均衡而不是通过我的代码来为你轮询均衡启动的开关，开启后 API_KEY 需要设置为请求用的 token，同时SSO环境变量失效，每次只能传入一个， API_KEY的值为你的 sso 的 cookie 值，不支持在apikey填入多个。想自动使用多个sso请关闭 IS_CUSTOM_SSO 这个环境变量，然后按照SSO环境变量要求在sso环境变量里填入多个sso，由我的项目代码来为你自动轮询（可不填，默认关闭）| `true/false`|
 |`SHOW_THINKING` | 是否显示思考模型的思考过程（可不填，默认关闭） | `true/false`|
 
