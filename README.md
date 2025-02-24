@@ -131,9 +131,7 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - 生图模型不支持历史对话，仅支持生图。
 ## 补充说明
 - 如需使用流式生图的图像功能，需在[PicGo图床](https://www.picgo.net/)或者[tumy图床](https://tu.my/)申请API Key，前者似乎无法注册了，没有前面图床账号的可以选择后一个图床。
-- 对于部分需要自己设置负载均衡和轮询的，提供新的环境变量可以单独控制，开启后API_KEY为请求用的token，每次只能传入一个,获取到sso和ss0_rw后以;分割当做API_KEY即可，格式为 ```eyJhbGciOiJIUzI1NiJ9………………;eyJhbGciOiJIUzI1NiJ9…………………```
 - 自动移除历史消息里的think过程，同时如果历史消息里包含里base64图片文本，而不是通过文件上传的方式上传，则自动转换为[图片]占用符。
-- 对于部分需要自己设置负载均衡和轮询的，可以提供的环境变量IS_CUSTOM_SSO来单独控制，开启后API_KEY为请求用的token，每次只能传入一个，要求格式为：你的sso的cookie值，不支持填入多个。想使用多个请关闭IS_CUSTOM_SSO这个环境变量，然后按照sso的环境变量要求填入sso，由我的项目代码来为你自动轮询
 
 ## 注意事项
 ⚠️ 本项目仅供学习和研究目的，请遵守相关使用条款。
