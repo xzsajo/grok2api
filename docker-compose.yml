@@ -8,7 +8,6 @@ services:
     environment:
       - API_KEY=your_api_key
       - ISSHOW_SEARCH_RESULTS=false
-      - CHROME_PATH=/usr/bin/chromium
       - PORT=3000
       - SHOW_THINKING=true
       - SSO=your_sso
