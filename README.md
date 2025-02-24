@@ -14,14 +14,13 @@
 docker run -it -d --name grok2api \
   -p 3000:3000 \
   -e API_KEY=your_api_key \
-  -e PICUI_KEY=你的图床key,和PICGO_KEY 二选一 \
-  -e PICGO_KEY=你的图床key,和PICUI_KEY二选一 \
+  -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
+  -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
   -e IS_CUSTOM_SSO=false \
   -e ISSHOW_SEARCH_RESULTS=false \
   -e PORT=3000 \
   -e SHOW_THINKING=true \
   -e SSO=your_sso \
-  -e SSO_RW=your_sso_rw \
   yxmiler/grok2api:latest
 ```
 
@@ -36,14 +35,13 @@ services:
       - "3000:3000"
     environment:
       - API_KEY=your_api_key
-      - PICUI_KEY=你的图床key,和PICGO_KEY 二选一
-      - PICGO_KEY=你的图床key,和PICUI_KEY二选一
+      - TUMY_KEY=你的图床key,和PICGO_KEY 二选一
+      - PICGO_KEY=你的图床key,和TUMY_KEY二选一
       - IS_CUSTOM_SSO=false
       - ISSHOW_SEARCH_RESULTS=false
       - PORT=3000
       - SHOW_THINKING=true
       - SSO=your_sso
-      - SSO_RW=your_sso_rw
     restart: unless-stopped
 ````
 
@@ -58,14 +56,13 @@ docker build -t yourusername/grok2api .
 docker run -it -d --name grok2api \
   -p 3000:3000 \
   -e API_KEY=your_api_key \
-  -e PICUI_KEY=你的图床key,和PICGO_KEY 二选一 \
-  -e PICGO_KEY=你的图床key,和PICUI_KEY二选一 \
+  -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
+  -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
   -e IS_CUSTOM_SSO=false \
   -e ISSHOW_SEARCH_RESULTS=false \
   -e PORT=3000 \
   -e SHOW_THINKING=true \
   -e SSO=your_sso \
-  -e SSO_RW=your_sso_rw \
   yourusername/grok2api:latest
 ```
 
@@ -75,10 +72,9 @@ docker run -it -d --name grok2api \
 |--- | --- | ---|
 |`API_KEY` | 自定义认证鉴权密钥（可以不填，默认是sk-123456） | `sk-123456`|
 |`PICGO_KEY` | PicGo图床密钥，两个图床二选一 ，不填无法流式生图 | -|
-|`PICUI_KEY` | PiCu图床密钥，两个图床二选一，不填无法流式生图（抱脸不可用） | -|
+|`TUMY_KEY` | TUMY图床密钥，两个图床二选一，不填无法流式生图| -|
 |`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 （可不填，默认关闭） | `true/false`|
-|`SSO` | Grok官网SSO Cookie,可以设置多个使用,分隔，我的代码里会自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
-|`SSO_RW` | Grok官网SSO_RW Cookie,,可以设置多个使用,分隔，我的代码里会自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso_rw,sso_rw`|
+|`SSO` | Grok官网SSO Cookie,可以设置多个使用英文 , 分隔，我的代码里会对不同账号的SSO自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
 |`PORT` | 服务部署端口（可默认，3000） | `3000`|
 |`IS_CUSTOM_SSO` | 如果你想自己来自定义负载均衡而不是通过我的代码来为你轮询均衡启动的开关，开启后，API_KEY需要设置为通过；分割的```sso的cookie值;sso_rw的cookie值```这种格式，同时SSO和SSO_RW环境变量失效（可不填，默认关闭） | `true/false`|
 |`SHOW_THINKING` | 是否显示思考模型的思考过程（可不填，默认关闭） | `true/false`|
@@ -133,10 +129,10 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - 可能存在一定程度的降智
 - 生图模型不支持历史对话，仅支持生图。
 ## 补充说明
-- 如需使用流式生图的图像功能，需在[PicGo图床](https://www.picgo.net/)或者[picui图床](https://picui.cn/)申请API Key，前者似乎无法注册了，没有前面图床账号的可以选择后一个图床，后面一个图床已知在抱脸无法使用。
+- 如需使用流式生图的图像功能，需在[PicGo图床](https://www.picgo.net/)或者[tumy图床](https://tu.my/)申请API Key，前者似乎无法注册了，没有前面图床账号的可以选择后一个图床。
 - 对于部分需要自己设置负载均衡和轮询的，提供新的环境变量可以单独控制，开启后API_KEY为请求用的token，每次只能传入一个,获取到sso和ss0_rw后以;分割当做API_KEY即可，格式为 ```eyJhbGciOiJIUzI1NiJ9………………;eyJhbGciOiJIUzI1NiJ9…………………```
 - 自动移除历史消息里的think过程，同时如果历史消息里包含里base64图片文本，而不是通过文件上传的方式上传，则自动转换为[图片]占用符。
-- 对于部分需要自己设置负载均衡和轮询的，可以提供的环境变量IS_CUSTOM_SSO来单独控制，开启后API_KEY为请求用的token，每次只能传入一个,获取到sso和ss0_rw后以;分割当做API_KEY即可，格式为：假如你的sso的cookie是abc,sso_rw的cookie是123，那么apikey只能是 ```abc;123```，不支持填入多个。想使用多个请关闭IS_CUSTOM_SSO这个环境变量，然后按照sso和sso_rw的环境变量要求填入sso和sso_rw，由我的项目代码来为你自动轮询
+- 对于部分需要自己设置负载均衡和轮询的，可以提供的环境变量IS_CUSTOM_SSO来单独控制，开启后API_KEY为请求用的token，每次只能传入一个，要求格式为：你的sso的cookie值，不支持填入多个。想使用多个请关闭IS_CUSTOM_SSO这个环境变量，然后按照sso的环境变量要求填入sso，由我的项目代码来为你自动轮询
 
 ## 注意事项
 ⚠️ 本项目仅供学习和研究目的，请遵守相关使用条款。
