@@ -7,9 +7,11 @@ services:
       - "3000:3000"
     environment:
       - API_KEY=your_api_key
+      - PICUI_KEY=你的图床key,和PICGO_KEY 二选一
+      - PICGO_KEY=你的图床key,和PICUI_KEY二选一
+      - IS_CUSTOM_SSO=false
       - ISSHOW_SEARCH_RESULTS=false
       - PORT=3000
       - SHOW_THINKING=true
       - SSO=your_sso
-      - SSO_RW=your_sso_rw
     restart: unless-stopped
