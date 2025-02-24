@@ -76,7 +76,7 @@ docker run -it -d --name grok2api \
 |`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 （可不填，默认关闭） | `true/false`|
 |`SSO` | Grok官网SSO Cookie,可以设置多个使用英文 , 分隔，我的代码里会对不同账号的SSO自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
 |`PORT` | 服务部署端口（可默认，3000） | `3000`|
-|`IS_CUSTOM_SSO` | 如果你想自己来自定义负载均衡而不是通过我的代码来为你轮询均衡启动的开关，开启后，API_KEY需要设置为通过；分割的```sso的cookie值;sso_rw的cookie值```这种格式，同时SSO和SSO_RW环境变量失效（可不填，默认关闭） | `true/false`|
+|`IS_CUSTOM_SSO` | 这是如果你想自己来自定义负载均衡而不是通过我的代码来为你轮询均衡启动的开关，开启后 API_KEY 需要设置为请求用的 token，同时SSO环境变量失效，每次只能传入一个， API_KEY的值为你的 sso 的 cookie 值，不支持在apikey填入多个。想自动使用多个sso请关闭 IS_CUSTOM_SSO 这个环境变量，然后按照SSO环境变量要求在sso环境变量里填入多个sso，由我的项目代码来为你自动轮询（可不填，默认关闭）| `true/false`|
 |`SHOW_THINKING` | 是否显示思考模型的思考过程（可不填，默认关闭） | `true/false`|
 
 ## 方法二：Hugging Face部署
@@ -109,8 +109,8 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 - `grok-3-reasoning`
 - 
 ### cookie的获取办法：
-1、打开[grok官网](https://grok.com/)
-2、复制如下的SSO的cookie的值填入SSO变量即可
+1. 打开[grok官网](https://grok.com/)
+2. 复制如下的SSO的cookie的值填入SSO变量即可
 ![9EA{{UY6 PU~PENQHYO5JS7](https://github.com/user-attachments/assets/539d4a53-9352-49fd-8657-e942a94f44e9)
 
 
