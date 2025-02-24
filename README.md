@@ -111,7 +111,8 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 ### cookie的获取办法：
 1、打开[grok官网](https://grok.com/)
 2、复制如下两个填入即可
-![GUU EJ{EM(A94D1FO0K %NW](https://github.com/user-attachments/assets/5491cc30-d17d-48f1-aeea-e6e710046380)
+![9EA{{UY6 PU~PENQHYO5JS7](https://github.com/user-attachments/assets/539d4a53-9352-49fd-8657-e942a94f44e9)
+
 
 
 ### API调用
