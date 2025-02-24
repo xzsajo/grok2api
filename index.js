@@ -28,7 +28,7 @@ const CONFIG = {
         API_KEY: process.env.API_KEY || "sk-123456",
         SIGNATURE_COOKIE: null,
         TEMP_COOKIE: null,
-        PICGO_KEY: null, //想要流式生图的话需要填入这个PICGO图床的key
+        PICGO_KEY: process.env.PICGO_KEY || null, //想要流式生图的话需要填入这个PICGO图床的key
         PICUI_KEY: process.env.PICUI_KEY || null //想要流式生图的话需要填入这个PICUI图床的key 两个图床二选一，默认使用PICGO
     },
     SERVER: {
