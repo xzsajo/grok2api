@@ -570,6 +570,11 @@ async function handleResponse(response, model, res, isStream) {
         let buffer = '';
         let fullResponse = '';
         const dataPromises = [];
+        if(isStream){
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+        }
         
         return new Promise((resolve, reject) => { 
             stream.on('data', async (chunk) => {
