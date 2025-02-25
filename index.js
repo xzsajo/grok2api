@@ -585,6 +585,9 @@ async function handleResponse(response, model, res, isStream) {
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
         }
+        CONFIG.IS_THINKING = false;
+        CONFIG.IS_IMG_GEN = false;
+        CONFIG.IS_IMG_GEN2 = false;
         Logger.info("开始处理流式响应", 'Server');
 
         return new Promise((resolve, reject) => {
@@ -654,8 +657,6 @@ async function handleResponse(response, model, res, isStream) {
                             res.json(MessageProcessor.createChatResponse(fullResponse, model));
                         }
                     }
-                    CONFIG.IS_IMG_GEN = false;
-                    CONFIG.IS_IMG_GEN2 = false;
                     resolve();
                 } catch (error) {
                     Logger.error(error, 'Server');
@@ -670,8 +671,6 @@ async function handleResponse(response, model, res, isStream) {
         });
     } catch (error) {
         Logger.error(error, 'Server');
-        CONFIG.IS_IMG_GEN = false;
-        CONFIG.IS_IMG_GEN2 = false;
         throw new Error(error);
     }
 }
