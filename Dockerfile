@@ -1,14 +1,11 @@
-FROM node:18-slim
+FROM node:18-alpine
 
-RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    procps \
+RUN apk add --no-cache \
     chromium \
-    chromium-sandbox \
-	&& rm -rf /var/lib/apt/lists/*
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates
 
 WORKDIR /app
 
@@ -18,6 +15,8 @@ RUN npm install
 
 COPY . .
 
+ENV PORT=3000
+
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
