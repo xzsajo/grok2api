@@ -13,8 +13,8 @@
 ```bash
 docker run -it -d --name grok2api \
   -p 3000:3000 \
-  -e IS_TEMP_GROK2=true
-  -e GROK2_CONCURRENCY_LEVEL=4
+  -e IS_TEMP_GROK2=true \
+  -e GROK2_CONCURRENCY_LEVEL=4 \
   -e API_KEY=your_api_key \
   -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
   -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
@@ -59,8 +59,8 @@ docker build -t yourusername/grok2api .
 ```bash
 docker run -it -d --name grok2api \
   -p 3000:3000 \
-  -e IS_TEMP_GROK2=true
-  -e GROK2_CONCURRENCY_LEVEL=4
+  -e IS_TEMP_GROK2=true \
+  -e GROK2_CONCURRENCY_LEVEL=4 \
   -e API_KEY=your_api_key \
   -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
   -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
