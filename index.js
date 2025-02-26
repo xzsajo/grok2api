@@ -47,7 +47,7 @@ const CONFIG = {
     SSO_INDEX: 0,//sso的索引
     TEMP_COOKIE_INDEX: 0,//临时cookie的下标
     ISSHOW_SEARCH_RESULTS: process.env.ISSHOW_SEARCH_RESULTS == undefined ? true : process.env.ISSHOW_SEARCH_RESULTS == 'true',//是否显示搜索结果
-    CHROME_PATH: puppeteer.executablePath() || "/usr/bin/chromium"//chrome路径
+    CHROME_PATH: null
 };
 puppeteer.use(StealthPlugin())
 
@@ -72,6 +72,12 @@ const DEFAULT_HEADERS = {
 
 
 async function initialization() {
+    try {
+        CONFIG.CHROME_PATH = puppeteer.executablePath();
+    } catch (error) {
+        CONFIG.CHROME_PATH = "/usr/bin/chromium";
+    }
+    Logger.info(`CHROME_PATH: ${CONFIG.CHROME_PATH}`, 'Server');
     if (CONFIG.API.IS_CUSTOM_SSO) {
         if(CONFIG.API.IS_TEMP_GROK2){
             await tempCookieManager.ensureCookies();
