@@ -13,6 +13,8 @@
 ```bash
 docker run -it -d --name grok2api \
   -p 3000:3000 \
+  -e IS_TEMP_GROK2=true
+  -e GROK2_CONCURRENCY_LEVEL=4
   -e API_KEY=your_api_key \
   -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
   -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
@@ -34,6 +36,8 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - IS_TEMP_GROK2=true
+      - GROK2_CONCURRENCY_LEVEL=4
       - API_KEY=your_api_key
       - TUMY_KEY=你的图床key,和PICGO_KEY 二选一
       - PICGO_KEY=你的图床key,和TUMY_KEY二选一
@@ -55,6 +59,8 @@ docker build -t yourusername/grok2api .
 ```bash
 docker run -it -d --name grok2api \
   -p 3000:3000 \
+  -e IS_TEMP_GROK2=true
+  -e GROK2_CONCURRENCY_LEVEL=4
   -e API_KEY=your_api_key \
   -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
   -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
@@ -68,16 +74,18 @@ docker run -it -d --name grok2api \
 
 ### 3. 环境变量配置
 
-|变量 | 说明 | 示例|
-|--- | --- | ---|
-|`API_KEY` | 自定义认证鉴权密钥（可以不填，默认是sk-123456） | `sk-123456`|
-|`PICGO_KEY` | PicGo图床密钥，两个图床二选一 ，不填无法流式生图 | -|
-|`TUMY_KEY` | TUMY图床密钥，两个图床二选一，不填无法流式生图| -|
-|`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 （可不填，默认关闭） | `true/false`|
-|`SSO` | Grok官网SSO Cookie,可以设置多个使用英文 , 分隔，我的代码里会对不同账号的SSO自动轮询和均衡（除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
-|`PORT` | 服务部署端口（可不填，默认3000） | `3000`|
-|`IS_CUSTOM_SSO` | 这是如果你想自己来自定义负载均衡而不是通过我的代码来为你轮询均衡启动的开关，开启后 API_KEY 需要设置为请求用的 token，同时SSO环境变量失效，每次只能传入一个， API_KEY的值为你的 sso 的 cookie 值，不支持在apikey填入多个。想自动使用多个sso请关闭 IS_CUSTOM_SSO 这个环境变量，然后按照SSO环境变量要求在sso环境变量里填入多个sso，由我的项目代码来为你自动轮询（可不填，默认关闭）| `true/false`|
-|`SHOW_THINKING` | 是否显示思考模型的思考过程（可不填，默认关闭） | `true/false`|
+|变量 | 说明 | 构建时是否必填 |示例|
+|--- | --- | ---| ---|
+|`IS_TEMP_GROK2` | 是否开启无限临时账号的grok2，关闭则grok2相关模型是使用你自己的cookie账号的次数 | （可以不填，默认是true） | `true/false`|
+|`GROK2_CONCURRENCY_LEVEL` | grok2临时账号的并发控制，过高会被ban掉ip | （可以不填，默认是4） | `4`|
+|`API_KEY` | 自定义认证鉴权密钥 | （可以不填，默认是sk-123456） | `sk-123456`|
+|`PICGO_KEY` | PicGo图床密钥，两个图床二选一 | 不填无法流式生图 | -|
+|`TUMY_KEY` | TUMY图床密钥，两个图床二选一 | 不填无法流式生图 | -|
+|`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 | （可不填，默认关闭） | `true/false`|
+|`SSO` | Grok官网SSO Cookie,可以设置多个使用英文 , 分隔，我的代码里会对不同账号的SSO自动轮询和均衡 | （除非开启IS_CUSTOM_SSO否则必填） | `sso,sso`|
+|`PORT` | 服务部署端口 | （可不填，默认3000） | `3000`|
+|`IS_CUSTOM_SSO` | 这是如果你想自己来自定义号池来轮询均衡，而不是通过我代码里已经内置的号池逻辑系统来为你轮询均衡启动的开关。开启后 API_KEY 需要设置为请求认证用的 sso cookie，同时SSO环境变量失效。一个apikey每次只能传入一个sso cookie 值，不支持一个请求里的apikey填入多个sso。想自动使用多个sso请关闭 IS_CUSTOM_SSO 这个环境变量，然后按照SSO环境变量要求在sso环境变量里填入多个sso，由我的代码里内置的号池系统来为你自动轮询 | （可不填，默认关闭） | `true/false`|
+|`SHOW_THINKING` | 是否显示思考模型的思考过程 | （可不填，默认关闭） | `true/false`|
 
 ## 方法二：Hugging Face部署
 
@@ -93,10 +101,10 @@ https://huggingface.co/spaces/yxmiler/GrokAPIService
 5. 已支持推理模型功能，使用grok-3-reasoning
 6. 已支持真流式，上面全部功能都可以在流式情况调用
 7. 支持多账号轮询，在环境变量中配置
-8. grok2采用临时账号机制，理论无限调用。
+8. grok2采用临时账号机制，理论无限调用，也可以使用自己账号的grok2。
 9. 可以选择是否移除思考模型的思考过程。
 10. 支持自行设置轮询和负载均衡，而不依靠项目代码
-11. 已转换为openai格式。
+12. 已转换为openai格式。
 
 ### 可用模型列表
 - `grok-2`
