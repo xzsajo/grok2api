@@ -47,7 +47,7 @@ const CONFIG = {
     SSO_INDEX: 0,//sso的索引
     TEMP_COOKIE_INDEX: 0,//临时cookie的下标
     ISSHOW_SEARCH_RESULTS: process.env.ISSHOW_SEARCH_RESULTS == undefined ? true : process.env.ISSHOW_SEARCH_RESULTS == 'true',//是否显示搜索结果
-    CHROME_PATH: null
+    CHROME_PATH: process.env.CHROME_PATH || null
 };
 puppeteer.use(StealthPlugin())
 
@@ -72,14 +72,16 @@ const DEFAULT_HEADERS = {
 
 
 async function initialization() {
-    try {
-        CONFIG.CHROME_PATH = puppeteer.executablePath();
-    } catch (error) {
-        CONFIG.CHROME_PATH = "/usr/bin/chromium";
+    if (CONFIG.CHROME_PATH == null) {
+        try {
+            CONFIG.CHROME_PATH = puppeteer.executablePath();
+        } catch (error) {
+            CONFIG.CHROME_PATH = "/usr/bin/chromium";
+        }
     }
     Logger.info(`CHROME_PATH: ${CONFIG.CHROME_PATH}`, 'Server');
     if (CONFIG.API.IS_CUSTOM_SSO) {
-        if(CONFIG.API.IS_TEMP_GROK2){
+        if (CONFIG.API.IS_TEMP_GROK2) {
             await tempCookieManager.ensureCookies();
         }
         return;
@@ -89,7 +91,8 @@ async function initialization() {
         tokenManager.addToken(`sso-rw=${sso};sso=${sso}`);
     });
     console.log(JSON.stringify(tokenManager.getActiveTokens(), null, 2));
-    if(CONFIG.API.IS_TEMP_GROK2){
+    Logger.info(`令牌加载完成，共加载: ${tokenManager.getTokenCount()}个令牌`, 'Server');
+    if (CONFIG.API.IS_TEMP_GROK2) {
         await tempCookieManager.ensureCookies();
         CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
     }
@@ -102,18 +105,18 @@ class AuthTokenManager {
         this.activeTokens = [];
         this.expiredTokens = new Map();
         this.tokenModelFrequency = new Map();
-        if(CONFIG.API.IS_TEMP_GROK2){
+        if (CONFIG.API.IS_TEMP_GROK2) {
             this.modelRateLimit = {
                 "grok-3": { RequestFrequency: 20 },
-                "grok-3-deepsearch": { RequestFrequency: 5 },
-                "grok-3-reasoning": { RequestFrequency: 5 }
+                "grok-3-deepsearch": { RequestFrequency: 10 },
+                "grok-3-reasoning": { RequestFrequency: 10 }
             };
             this.modelInitFrequency = {
                 "grok-3": 0,
                 "grok-3-deepsearch": 0,
                 "grok-3-reasoning": 0
             };
-        }else{
+        } else {
             this.modelRateLimit = {
                 "grok-2": { RequestFrequency: 20 },
                 "grok-3": { RequestFrequency: 20 },
@@ -340,33 +343,33 @@ class GrokTempCookieManager {
             // 获取新的 cookies
             let retryCount = 0;
             let remainingCount = this.initialCookieCount - this.cookies.length;
-    
+
             while (retryCount < CONFIG.RETRY.MAX_ATTEMPTS) {
                 await this.initializeTempCookies(remainingCount);
-                if(this.extractCount != remainingCount){
-                    if(this.extractCount == 0){
+                if (this.extractCount != remainingCount) {
+                    if (this.extractCount == 0) {
                         Logger.error(`无法获取足够的有效 TempCookies，可能网络存在问题，当前数量：${this.cookies.length}`);
-                    }else if(this.extractCount < remainingCount){
-                        remainingCount-=this.extractCount;
+                    } else if (this.extractCount < remainingCount) {
+                        remainingCount -= this.extractCount;
                         this.extractCount = 0;
                         retryCount++;
-                        await Utils.delay(1000 * retryCount); 
-                    }else{
+                        await Utils.delay(1000 * retryCount);
+                    } else {
                         break;
                     }
-                }else {
+                } else {
                     break;
                 }
             }
             if (this.currentIndex >= this.cookies.length) {
                 this.currentIndex = 0;
             }
-    
+
             if (this.cookies.length < this.initialCookieCount) {
-                if(this.cookies.length !== 0){
+                if (this.cookies.length !== 0) {
                     // 如果已经获取到一些 TempCookies，则只提示警告错误
                     Logger.error(`无法获取足够的有效 TempCookies，可能网络存在问题，当前数量：${this.cookies.length}`);
-                }else{
+                } else {
                     // 如果未获取到任何 TempCookies，则抛出错误
                     throw new Error(`无法获取足够的有效 TempCookies，可能网络存在问题，当前数量：${this.cookies.length}`);
                 }
@@ -375,7 +378,7 @@ class GrokTempCookieManager {
             Logger.error('刷新 cookies 失败:', error);
         } finally {
             Logger.info(`已提取${this.cookies.length}个TempCookies`, 'Server');
-            Logger.info(`提取的TempCookies为${JSON.stringify(this.cookies,null,2)}`, 'Server');
+            Logger.info(`提取的TempCookies为${JSON.stringify(this.cookies, null, 2)}`, 'Server');
             this.isRefreshing = false;
         }
     }
@@ -942,17 +945,17 @@ app.post('/v1/chat/completions', async (req, res) => {
                     if (isTempCookie) {
                         // 移除当前失效的 cookie
                         tempCookieManager.cookies.splice(tempCookieManager.currentIndex, 1);
-                        if(tempCookieManager.cookies.length != 0){
+                        if (tempCookieManager.cookies.length != 0) {
                             tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                             CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             tempCookieManager.ensureCookies()
-                        }else{
+                        } else {
                             try {
                                 await tempCookieManager.ensureCookies();
                                 tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                                 CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             } catch (error) {
-                                throw error; 
+                                throw error;
                             }
                         }
                     } else {
@@ -972,17 +975,17 @@ app.post('/v1/chat/completions', async (req, res) => {
                     if (isTempCookie) {
                         // 移除当前失效的 cookie
                         tempCookieManager.cookies.splice(tempCookieManager.currentIndex, 1);
-                        if(tempCookieManager.cookies.length != 0){
+                        if (tempCookieManager.cookies.length != 0) {
                             tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                             CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             tempCookieManager.ensureCookies()
-                        }else{
+                        } else {
                             try {
                                 await tempCookieManager.ensureCookies();
                                 tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                                 CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             } catch (error) {
-                                throw error; 
+                                throw error;
                             }
                         }
                     } else {
@@ -1001,17 +1004,17 @@ app.post('/v1/chat/completions', async (req, res) => {
                     if (isTempCookie) {
                         // 移除当前失效的 cookie
                         tempCookieManager.cookies.splice(tempCookieManager.currentIndex, 1);
-                        if(tempCookieManager.cookies.length != 0){
+                        if (tempCookieManager.cookies.length != 0) {
                             tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                             CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             tempCookieManager.ensureCookies()
-                        }else{
+                        } else {
                             try {
                                 await tempCookieManager.ensureCookies();
                                 tempCookieManager.currentIndex = tempCookieManager.currentIndex % tempCookieManager.cookies.length;
                                 CONFIG.API.TEMP_COOKIE = tempCookieManager.cookies[tempCookieManager.currentIndex];
                             } catch (error) {
-                                throw error; 
+                                throw error;
                             }
                         }
                     } else {
