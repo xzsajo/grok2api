@@ -485,8 +485,7 @@ class GrokApiClient:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
                 "Connection": "keep-alive",
-                "Accept": "*/*",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept": "text/event-stream",
                 "Content-Type": "text/plain;charset=UTF-8",
                 "Cookie": token,
                 "baggage": "sentry-public_key=b311e0f2690c81f25e2c4cf6d4f7ce1c"
@@ -709,8 +708,21 @@ async def stream_response_generator(response, model):
                 continue
                 
             try:
-                line_str = line.decode('utf-8')
-                line_json = json.loads(line_str)
+                try:
+                    line_str = line.decode('utf-8', errors='replace')
+                    # 添加检查，确保解码后的字符串是有效的JSON格式
+                    if not line_str.strip() or not line_str.strip()[0] in ['{', '[']:
+                        logger.warning(f"无效的JSON数据: {line_str}", "Server")
+                        continue
+                except UnicodeDecodeError:
+                    logger.warning("解码失败，跳过此行数据", "Server")
+                    continue
+                
+                try:
+                    line_json = json.loads(line_str)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON解析失败: {e}, 数据: {line_str[:50]}...", "Server")
+                    continue
                 
                 if line_json and line_json.get("error"):
                     raise ValueError("RateLimitError")
@@ -733,13 +745,13 @@ async def stream_response_generator(response, model):
                     yield f"data: {json.dumps(MessageProcessor.create_chat_response(data_image, model, True))}\n\n"
                     
             except Exception as error:
-                logger.error(error, "Server")
+                logger.error(f"处理行数据错误: {str(error)}", "Server")
                 continue
                 
         yield "data: [DONE]\n\n"
         
     except Exception as error:
-        logger.error(error, "Server")
+        logger.error(f"流式响应总体错误: {str(error)}", "Server")
         raise error
 
 async def handle_normal_response(response, model):
@@ -770,8 +782,21 @@ async def handle_normal_response(response, model):
                 continue
                 
             try:
-                line_str = line.decode('utf-8')
-                line_json = json.loads(line_str)
+                try:
+                    line_str = line.decode('utf-8', errors='replace')
+                    # 添加检查，确保解码后的字符串是有效的JSON格式
+                    if not line_str.strip() or not line_str.strip()[0] in ['{', '[']:
+                        logger.warning(f"无效的JSON数据: {line_str}", "Server")
+                        continue
+                except UnicodeDecodeError:
+                    logger.warning("解码失败，跳过此行数据", "Server")
+                    continue
+                
+                try:
+                    line_json = json.loads(line_str)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON解析失败: {e}, 数据: {line_str[:50]}...", "Server")
+                    continue
                 
                 if line_json and line_json.get("error"):
                     raise ValueError("RateLimitError")
@@ -793,7 +818,7 @@ async def handle_normal_response(response, model):
                     image_url = result["imageUrl"]
                     
             except Exception as error:
-                logger.error(error, "Server")
+                logger.error(f"处理行数据错误: {str(error)}", "Server")
                 continue
                 
         if CONFIG["IS_IMG_GEN2"] and image_url:
@@ -803,7 +828,7 @@ async def handle_normal_response(response, model):
             return MessageProcessor.create_chat_response(full_response, model)
             
     except Exception as error:
-        logger.error(error, "Server")
+        logger.error(f"非流式响应总体错误: {str(error)}", "Server")
         raise error
 
 async def handle_image_response(image_url,model):
@@ -1008,8 +1033,7 @@ async def chat_completions():
                     headers = {
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
                         "Connection": "keep-alive",
-                        "Accept": "*/*",
-                        "Accept-Encoding": "gzip, deflate, br, zstd",
+                        "Accept": "text/event-stream",
                         "Content-Type": "text/plain;charset=UTF-8",
                         "Cookie": token,
                         "baggage": "sentry-public_key=b311e0f2690c81f25e2c4cf6d4f7ce1c"
