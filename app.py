@@ -176,7 +176,7 @@ class AuthTokenManager:
                     }
         logger.info(f"添加令牌成功: {token}", "TokenManager")
         
-    def set_token(self, token):
+    async def set_token(self, token):
         models = list(self.model_config.keys())
         for model in models:
             self.token_model_map[model] = [{
