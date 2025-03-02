@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir flask requests curl_cffi werkzeug loguru
 
 COPY . .
 
-ENV PORT=5200
-EXPOSE 5200
+ENV PORT=3000
+EXPOSE 3000
 
 CMD ["python", "app.py"]
