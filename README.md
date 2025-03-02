@@ -39,8 +39,6 @@ services:
       - "3000:3000"
     environment:
       - API_KEY=your_api_key
-      - TUMY_KEY=你的图床key,和PICGO_KEY 二选一
-      - PICGO_KEY=你的图床key,和TUMY_KEY二选一
       - IS_TEMP_CONVERSATION=true
       - IS_CUSTOM_SSO=false
       - ISSHOW_SEARCH_RESULTS=false
@@ -62,8 +60,6 @@ docker run -it -d --name grok2api \
   -p 3000:3000 \
   -e IS_TEMP_CONVERSATION=false \
   -e API_KEY=your_api_key \
-  -e TUMY_KEY=你的图床key,和PICGO_KEY 二选一 \
-  -e PICGO_KEY=你的图床key,和TUMY_KEY二选一 \
   -e IS_CUSTOM_SSO=false \
   -e ISSHOW_SEARCH_RESULTS=false \
   -e PORT=3000 \
@@ -72,12 +68,13 @@ docker run -it -d --name grok2api \
   yourusername/grok2api:latest
 ```
 
-### 3. 环境变量配置
+### 3. 环境变量具体配置
 
 |变量 | 说明 | 构建时是否必填 |示例|
 |--- | --- | ---| ---|
 |`IS_TEMP_CONVERSATION` | 是否开启临时会话，开启后会话历史记录不会保留在网页 | （可以不填，默认是false） | `true/false`|
 |`API_KEY` | 自定义认证鉴权密钥 | （可以不填，默认是sk-123456） | `sk-123456`|
+|`PROXY` | 代理设置，支持https和Socks5 | 可不填，默认无 | -|
 |`PICGO_KEY` | PicGo图床密钥，两个图床二选一 | 不填无法流式生图 | -|
 |`TUMY_KEY` | TUMY图床密钥，两个图床二选一 | 不填无法流式生图 | -|
 |`ISSHOW_SEARCH_RESULTS` | 是否显示搜索结果 | （可不填，默认关闭） | `true/false`|
@@ -86,19 +83,25 @@ docker run -it -d --name grok2api \
 |`IS_CUSTOM_SSO` | 这是如果你想自己来自定义号池来轮询均衡，而不是通过我代码里已经内置的号池逻辑系统来为你轮询均衡启动的开关。开启后 API_KEY 需要设置为请求认证用的 sso cookie，同时SSO环境变量失效。一个apikey每次只能传入一个sso cookie 值，不支持一个请求里的apikey填入多个sso。想自动使用多个sso请关闭 IS_CUSTOM_SSO 这个环境变量，然后按照SSO环境变量要求在sso环境变量里填入多个sso，由我的代码里内置的号池系统来为你自动轮询 | （可不填，默认关闭） | `true/false`|
 |`SHOW_THINKING` | 是否显示思考模型的思考过程 | （可不填，默认关闭） | `true/false`|
 
+## 方法二：Hugging Face部署
+
+### 部署地址
+[GrokPythonTo2](https://huggingface.co/spaces/yxmiler/GrokPythonTo2)
+
 ### 功能特点
 实现的功能：
 1. 已支持文字生成图，使用grok-2-imageGen和grok-3-imageGen模型。
 2. 已支持全部模型识图和传图，只会识别存储用户消息最新的一个图，历史记录图全部为占位符替代。
 3. 已支持搜索功能，使用grok-2-search或者grok-3-search模型，可以选择是否关闭搜索结果
-4. 已支持深度搜索功能，使用grok-3-deepsearch
+4. 已支持深度搜索功能，使用grok-3-deepsearch，深度搜索支持think过程显示
 5. 已支持推理模型功能，使用grok-3-reasoning
 6. 已支持真流式，上面全部功能都可以在流式情况调用
 7. 支持多账号轮询，在环境变量中配置
 8. 可以选择是否移除思考模型的思考过程。
 9. 支持自行设置轮询和负载均衡，而不依靠项目代码
 10. 自动过CF屏蔽盾
-11. 已转换为openai格式。
+11. 可自定义http和Socks5代理
+12. 已转换为openai格式。
 
 ### 可用模型列表
 - `grok-2`
@@ -122,12 +125,11 @@ docker run -it -d --name grok2api \
 ![9EA{{UY6 PU~PENQHYO5JS7](https://github.com/user-attachments/assets/539d4a53-9352-49fd-8657-e942a94f44e9)
 
 
-
 ### API调用
-
-#### Docker版本
 - 模型列表：`/v1/models`
 - 对话：`/v1/chat/completions`
+- 添加令牌:`/add/token`
+- 获取全部令牌状态:`/get/tokens`
 
 ## 备注
 - 消息基于用户的伪造连续对话
