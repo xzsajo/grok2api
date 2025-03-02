@@ -103,7 +103,7 @@ CONFIG = {
         "PROXY": os.environ.get("PROXY") or None
     },
     "SERVER": {
-        "PORT": int(os.environ.get("PORT", 3000))
+        "PORT": int(os.environ.get("PORT", 5200))
     },
     "RETRY": {
         "MAX_ATTEMPTS": 2
@@ -936,7 +936,7 @@ def get_models():
                 "created": int(time.time()),
                 "owned_by": "grok"
             } 
-            for model in token_manager.token_model_map.keys()
+            for model in CONFIG["MODELS"].keys()
         ]
     })
 
