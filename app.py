@@ -103,7 +103,7 @@ CONFIG = {
         "PROXY": os.environ.get("PROXY") or None
     },
     "SERVER": {
-        "PORT": int(os.environ.get("PORT", 5200))
+        "PORT": int(os.environ.get("PORT", 3000))
     },
     "RETRY": {
         "MAX_ATTEMPTS": 2
