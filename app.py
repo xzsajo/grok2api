@@ -93,6 +93,7 @@ CONFIG = {
         "grok-3-reasoning": "grok-3"
     },
     "API": {
+        "IS_TEMP_CONVERSATION": os.environ.get("IS_TEMP_CONVERSATION", "true").lower() == "true",
         "IS_CUSTOM_SSO": os.environ.get("IS_CUSTOM_SSO", "false").lower() == "true",
         "BASE_URL": "https://grok.com",
         "API_KEY": os.environ.get("API_KEY", "sk-123456"),
